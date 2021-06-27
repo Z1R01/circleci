@@ -1,0 +1,91 @@
+stages:
+  - build
+  - deploy
+  - deploy_to_dev_server
+  - finish_feature
+  - remove_releas_host
+  - finish_hotfix
+
+
+build:
+  stage: build
+  before_script:
+    - echo Logging in to $CI_REGISTRY...
+    - docker login $CI_REGISTRY -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD"
+    - docker info | grep Registry
+  script:
+    - echo Build started on `date` for $CI_COMMIT_REF_NAME
+    - docker build  --no-cache -t "$CI_REGISTRY/web/$CI_PROJECT_TITLE:latest"   .
+    - docker push "$CI_REGISTRY/web/$CI_PROJECT_TITLE:latest"
+  only:
+    - master
+  tags:
+    - devops
+
+deploy:
+  stage: deploy
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - bash /devops/scripts/web/ci-test/develop_deploy
+  only:
+    - master
+  tags:
+    - devops
+
+
+deploy_to_dev_server:
+  stage: deploy_to_dev_server
+  variables:
+    GIT_STRATEGY: none
+  tags:
+    - devops
+  script:
+    - bash /devops/scripts/web/deploy
+  only:
+    - /^hotfix/.*$/
+    - /^feature/.*$/
+    - /^release/.*$/
+  except:
+    - schedules
+
+finish_feature:
+  stage: finish_feature
+  variables:
+    GIT_STRATEGY: none
+  tags:
+    - devops
+  script:
+    - bash /devops/scripts/web/finish_feature
+  rules:
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "develop"'
+      when: manual
+      
+
+finish_hotfix:
+  stage: finish_hotfix
+  variables:
+    GIT_STRATEGY: none
+  tags:
+    - devops
+  script:
+    - bash /devops/scripts/web/finish_hotfix
+  only:
+    - /^hotfix/.*$/
+  except:
+    - schedules
+  when: manual
+    
+remove_releas_host:
+  stage: remove_releas_host
+  variables:
+    GIT_STRATEGY: none
+  tags:
+    - devops
+  script:
+    - bash /devops/scripts/web/remove_releas_host
+  only:
+    - tags
+  when: manual
+  except:
+    - schedules

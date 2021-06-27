@@ -1,0 +1,8 @@
+#!/bin/bash
+
+docker build  -t  registry-asi.10d.ir/ci-test/nginx:latest .
+docker login -u pm6-ms -p AAAaaa.123 registry-asi.10d.ir
+docker push registry-asi.10d.ir/ci-test/nginx:latest
+cd /docker/compose/ci-test
+#cp -a /docker/compose/task_sys/docker-compose.yml .
+docker-compose up -d
